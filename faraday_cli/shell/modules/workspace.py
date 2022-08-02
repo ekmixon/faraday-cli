@@ -65,14 +65,13 @@ class WorkspaceCommands(cmd2.CommandSet):
     )
     def get_ws(self, args: argparse.Namespace):
         """Get Workspace"""
-        if not args.workspace_name:
-            if active_config.workspace:
-                workspace_name = active_config.workspace
-            else:
-                self._cmd.perror("No active Workspace")
-                return
-        else:
+        if args.workspace_name:
             workspace_name = args.workspace_name
+        elif active_config.workspace:
+            workspace_name = active_config.workspace
+        else:
+            self._cmd.perror("No active Workspace")
+            return
         try:
             workspace = self._cmd.api_client.get_workspace(workspace_name)
         except NotFoundError:
@@ -121,7 +120,7 @@ class WorkspaceCommands(cmd2.CommandSet):
     def delete_ws(self, args: argparse.Namespace):
         """Delete Workspace"""
         workspaces = self._cmd.api_client.get_workspaces()
-        workspace_choices = [ws for ws in map(lambda x: x["name"], workspaces)]
+        workspace_choices = list(map(lambda x: x["name"], workspaces))
         workspace_name = args.workspace_name
         if workspace_name not in workspace_choices:
             self._cmd.perror(f"Invalid workspace: {workspace_name}")
@@ -288,8 +287,9 @@ class WorkspaceCommands(cmd2.CommandSet):
                 lambda x: arrow.get(x).humanize(),
                 False,
             ),
-            ("creator", lambda x: "" if not x else f"by {x}", False),
+            ("creator", lambda x: f"by {x}" if x else "", False),
         )
+
         workspaces_info = self._cmd.api_client.filter_workspaces(
             query_filter=get_active_workspaces_filter()
         )
@@ -336,20 +336,18 @@ class WorkspaceCommands(cmd2.CommandSet):
                     workspace_data["severities"].append(text)
                 for key, name, parser in SUMMARY_COUNTER_KEYS:
                     value = workspace_info["stats"].get(key)
-                    value_text = value if not parser else parser(value)
+                    value_text = parser(value) if parser else value
                     workspace_data["summary"].append(f"{name}: {value_text}")
                 for activity in last_activities:
                     activity_data = []
                     for key, parser, send_full in ACTIVITIES_KEYS:
                         if send_full:
                             value = activity.get(key)
-                            value_text = (
-                                value if not parser else parser(activity)
-                            )
+                            value_text = parser(activity) if parser else value
                             activity_data.append(f"{value_text}")
                         else:
                             value = activity.get(key)
-                            value_text = value if not parser else parser(value)
+                            value_text = parser(value) if parser else value
                             activity_data.append(f"{value_text}")
                     workspace_data["activities"].append(
                         " ".join(activity_data)

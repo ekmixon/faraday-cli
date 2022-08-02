@@ -19,10 +19,7 @@ def is_supported():
 
     os_arch = platform.system()
 
-    if os_arch != "Windows":
-        return True
-
-    return False
+    return os_arch != "Windows"
 
 
 def get_environment():
@@ -83,10 +80,7 @@ def is_text_type(text):
     bool
         Whether parameter is a string or not
     """
-    if isinstance(text, six.text_type) or isinstance(text, six.string_types):
-        return True
-
-    return False
+    return isinstance(text, (six.text_type, six.string_types))
 
 
 def decode_utf_8_text(text):
@@ -139,7 +133,4 @@ def get_terminal_columns():
 
     # If column size is 0 either we are not connected
     # to a terminal or something else went wrong. Fallback to 80.
-    if terminal_size.columns == 0:
-        return 80
-    else:
-        return terminal_size.columns
+    return 80 if terminal_size.columns == 0 else terminal_size.columns

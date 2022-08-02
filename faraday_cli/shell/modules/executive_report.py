@@ -39,21 +39,22 @@ class ExecutiveReportsCommands(cmd2.CommandSet):
     )
     def list_executive_reports_templates(self, args):
         """List executive report templates"""
-        if not args.workspace_name:
-            if active_config.workspace:
-                workspace_name = active_config.workspace
-            else:
-                self._cmd.perror("No active Workspace")
-                return
-        else:
+        if args.workspace_name:
             workspace_name = args.workspace_name
 
+        elif active_config.workspace:
+            workspace_name = active_config.workspace
+        else:
+            self._cmd.perror("No active Workspace")
+            return
         templates_data = self._cmd.api_client.get_executive_report_templates(
             workspace_name
         )
-        data = []
-        for template in sorted(templates_data["items"], key=lambda x: x[1]):
-            data.append({"NAME": template[1], "GROUPED": template[0]})
+        data = [
+            {"NAME": template[1], "GROUPED": template[0]}
+            for template in sorted(templates_data["items"], key=lambda x: x[1])
+        ]
+
         self._cmd.poutput(
             tabulate(
                 data,

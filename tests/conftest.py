@@ -53,8 +53,10 @@ def token():
 @pytest.fixture(scope="function")
 def ok_configuration_file(token):
     with open(CONFIG_FILE, "w") as file:
-        with open(os.path.join(TEST_DATA, "config_file_template.yml")) as f:
-            template = f.read()
+        template = Path(
+            os.path.join(TEST_DATA, "config_file_template.yml")
+        ).read_text()
+
         config_data = template.format(**{"url": FARADAY_URL, "token": token})
         file.write(config_data)
         file.seek(0)

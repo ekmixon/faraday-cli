@@ -6,8 +6,9 @@ from cmd2 import CommandResult
 
 def test_create_ws(faraday_cli_app):
     workspace_name = "".join(
-        random.choice(string.ascii_lowercase) for i in range(10)
+        random.choice(string.ascii_lowercase) for _ in range(10)
     )
+
     command = f"workspace create {workspace_name}"
     create_out = faraday_cli_app.app_cmd(command)
     assert isinstance(create_out, CommandResult)
@@ -20,8 +21,9 @@ def test_create_ws(faraday_cli_app):
 
 def test_select_ws(faraday_cli_app):
     workspace_name = "".join(
-        random.choice(string.ascii_lowercase) for i in range(10)
+        random.choice(string.ascii_lowercase) for _ in range(10)
     )
+
     command = f"workspace create {workspace_name}"
     create_out = faraday_cli_app.app_cmd(command)
     assert isinstance(create_out, CommandResult)
@@ -38,8 +40,9 @@ def test_select_ws(faraday_cli_app):
 
 def test_list_ws(faraday_cli_app):
     workspace_name = "".join(
-        random.choice(string.ascii_lowercase) for i in range(10)
+        random.choice(string.ascii_lowercase) for _ in range(10)
     )
+
     command = f"workspace create {workspace_name}"
     create_out = faraday_cli_app.app_cmd(command)
     assert isinstance(create_out, CommandResult)

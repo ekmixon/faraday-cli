@@ -134,10 +134,9 @@ def init_args():
     parser.add_argument(
         "--version", action="store_true", help="Display version and exit"
     )
-    if len(sys.argv) == 1:
-        if sys.stdin.isatty():
-            parser.print_usage()
-            sys.exit(2)
+    if len(sys.argv) == 1 and sys.stdin.isatty():
+        parser.print_usage()
+        sys.exit(2)
 
     args = vars(parser.parse_args())
 
@@ -166,12 +165,12 @@ def main():
 
 def find_min(data):
     """Return the minimum value in sublist of list."""
-    return min([min(sublist) for sublist in data])
+    return min(min(sublist) for sublist in data)
 
 
 def find_max(data):
     """Return the maximum value in sublist of list."""
-    return max([max(sublist) for sublist in data])
+    return max(max(sublist) for sublist in data)
 
 
 def normalize(data, width):
@@ -182,8 +181,7 @@ def normalize(data, width):
     min_datum = find_min(data)
     if min_datum < 0:
         min_datum = abs(min_datum)
-        for datum in data:
-            data_offset.append([d + min_datum for d in datum])
+        data_offset.extend([d + min_datum for d in datum] for datum in data)
     else:
         data_offset = data
     min_datum = find_min(data_offset)
@@ -194,11 +192,7 @@ def normalize(data, width):
     # If you divide a number to the value of single tick, you will find how
     # many ticks it does contain basically.
     norm_factor = width / float(max_datum)
-    normal_data = []
-    for datum in data_offset:
-        normal_data.append([v * norm_factor for v in datum])
-
-    return normal_data
+    return [[v * norm_factor for v in datum] for datum in data_offset]
 
 
 def find_max_label_length(labels):
@@ -228,7 +222,7 @@ def hist_rows(data, args, colors):
     borders = []
     max_len = len(str(border))
 
-    for b in range(args["bins"] + 1):
+    for _ in range(args["bins"] + 1):
         borders.append(border)
         len_border = len(str(border))
         if len_border > max_len:
@@ -240,22 +234,13 @@ def hist_rows(data, args, colors):
     count_list = []
 
     for start, end in zip(borders[:-1], borders[1:]):
-        count = 0
-        #        for d in [d]
-        for v in [row[0] for row in data]:
-            if start <= v < end:
-                count += 1
-
+        count = sum(start <= v < end for v in [row[0] for row in data])
         count_list.append([count])
 
     normal_counts = normalize(count_list, args["width"])
 
     for i, border in enumerate(zip(borders[:-1], borders[1:])):
-        if colors:
-            color = colors[0]
-        else:
-            color = None
-
+        color = colors[0] if colors else None
         if not args.get("no_labels"):
             print(
                 "{:{x}} – {:{x}}: ".format(border[0], border[1], x=max_len),
@@ -269,9 +254,7 @@ def hist_rows(data, args, colors):
         if args.get("no_values"):
             tail = ""
         else:
-            tail = " {}{}".format(
-                args["format"].format(count_list[i][0]), args["suffix"]
-            )
+            tail = f' {args["format"].format(count_list[i][0])}{args["suffix"]}'
         print(tail)
 
 
@@ -285,10 +268,7 @@ def horiz_rows(labels, data, normal_dat, args, colors, doprint=True):
             # Hide the labels.
             label = ""
         else:
-            if args.get("label_before"):
-                fmt = "{:<{x}}"
-            else:
-                fmt = "{:<{x}}: "
+            fmt = "{:<{x}}" if args.get("label_before") else "{:<{x}}: "
             label = fmt.format(labels[i], x=find_max_label_length(labels))
 
         values = data[i]
@@ -300,11 +280,7 @@ def horiz_rows(labels, data, normal_dat, args, colors, doprint=True):
             if j > 0:
                 len_label = len(label)
                 label = " " * len_label
-            if args.get("label_before"):
-                fmt = "{}{}"
-            else:
-                fmt = " {}{}"
-
+            fmt = "{}{}" if args.get("label_before") else " {}{}"
             if args["no_values"]:
                 tail = args["suffix"]
             else:
@@ -312,11 +288,7 @@ def horiz_rows(labels, data, normal_dat, args, colors, doprint=True):
                     args["format"].format(values[j]), args["suffix"]
                 )
 
-            if colors:
-                color = colors[j]
-            else:
-                color = None
-
+            color = colors[j] if colors else None
             if doprint and not args["vertical"]:
                 print(label, end="")
 
@@ -395,9 +367,7 @@ def stacked_graph(labels, data, normal_data, len_categories, args, colors):
         for j in range(len(values)):
             print_row(values[j], int(num_blocks[j]), val_min, colors[j])
 
-        tail = " {}{}".format(
-            args["format"].format(sum(values)), args["suffix"]
-        )
+        tail = f' {args["format"].format(sum(values))}{args["suffix"]}'
         print(tail)
 
 
@@ -434,13 +404,13 @@ def vertically(value, num_blocks, val_min, color, args):
         result_list.append(i)
         counter += 1
 
-        if maxi == args["width"]:
-            if counter == (args["width"]):
-                break
-        else:
-            if counter == maxi:
-                break
-
+        if (
+            maxi == args["width"]
+            and counter == (args["width"])
+            or maxi != args["width"]
+            and counter == maxi
+        ):
+            break
     # Return a list of rows which will be used to print the result vertically.
     return result_list
 
@@ -488,10 +458,7 @@ def chart(colors, data, args, labels):
         # Normalization per category
         if args["different_scale"]:
             for i in range(len_categories):
-                cat_data = []
-                for dat in data:
-                    cat_data.append([dat[i]])
-
+                cat_data = [[dat[i]] for dat in data]
                 # Normalize data, handle negatives.
                 normal_cat_data = normalize(cat_data, args["width"])
 
@@ -549,11 +516,7 @@ def chart(colors, data, args, labels):
                 vertic = vertically(row[0], row[1], row[2], row[3], args=args)
 
         if args["vertical"] and len_categories == 1:
-            if colors:
-                color = colors[0]
-            else:
-                color = None
-
+            color = colors[0] if colors else None
             print_vertical(vertic, labels, color, args)
 
         print()
@@ -600,12 +563,9 @@ def check_data(labels, data, args):
                     sys.exit(2)
 
         if os.name == "nt":
-            for color in colorargs:
-                colors.append(AVAILABLE_COLORS.get(color))
+            colors.extend(AVAILABLE_COLORS.get(color) for color in colorargs)
         else:
-            for color in args["color"]:
-                colors.append(AVAILABLE_COLORS.get(color))
-
+            colors.extend(AVAILABLE_COLORS.get(color) for color in args["color"])
     # Vertical graph for multiple series of same scale is not supported yet.
     if args["vertical"] and len_categories > 1 and not args["different_scale"]:
         print(
@@ -617,7 +577,7 @@ def check_data(labels, data, args):
     # If user hasn't inserted colors, pick the first n colors
     # from the dict (n = number of categories).
     if args["stacked"] and not colors:
-        colors = [v for v in list(AVAILABLE_COLORS.values())[:len_categories]]
+        colors = list(list(AVAILABLE_COLORS.values())[:len_categories])
 
     return colors
 
@@ -632,7 +592,7 @@ def print_categories(categories, colors):
             )  # Start to write colorized.
             sys.stdout.write(f"\033[{colors[i]}m")  # Start to write colorized.
 
-        sys.stdout.write(TICK + " " + categories[i] + "  ")
+        sys.stdout.write(f"{TICK} {categories[i]}  ")
         if colors:
             sys.stdout.write("\033[0m")  # Back to original.
 
@@ -672,10 +632,7 @@ def calendar_heatmap(data, labels, args):
     else:
         colornum = AVAILABLE_COLORS.get("blue")
 
-    dt_dict = {}
-    for i in range(len(labels)):
-        dt_dict[labels[i]] = data[i][0]
-
+    dt_dict = {labels[i]: data[i][0] for i in range(len(labels))}
     # get max value
     max_val = float(max(data)[0])
 
@@ -715,7 +672,7 @@ def calendar_heatmap(data, labels, args):
     sys.stdout.write("\n")
 
     for day in range(7):
-        sys.stdout.write(DAYS[day] + ": ")
+        sys.stdout.write(f"{DAYS[day]}: ")
         for week in range(53):
             day_ = start_dt + timedelta(days=day + week * 7)
             day_str = day_.strftime("%Y-%m-%d")

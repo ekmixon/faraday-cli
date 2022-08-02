@@ -28,15 +28,9 @@ DEFAULT_TIMEOUT = int(os.environ.get("FARADAY_CLI_TIMEOUT", 10000))
 
 class FaradayApi:
     def __init__(self, url=None, ignore_ssl=False, token=None):
-        if url:
-            self.api_url = urljoin(url, "_api")
-        else:
-            self.api_url = None
+        self.api_url = urljoin(url, "_api") if url else None
         self.token = token
-        if self.token:
-            headers = {"Authorization": f"Token {self.token}"}
-        else:
-            headers = {}
+        headers = {"Authorization": f"Token {self.token}"} if self.token else {}
         ssl_verify = not ignore_ssl
         self.faraday_api = API(
             api_root_url=self.api_url,
@@ -72,16 +66,15 @@ class FaradayApi:
             except ClientError as e:
                 if e.response.status_code == 402:
                     raise ExpiredLicense("Your Faraday license is expired")
+                if (
+                    e.response.headers["content-type"]
+                    == "application/json"
+                ):
+                    raise RequestError(
+                        e.response.body.get("message", e.response.body)
+                    )
                 else:
-                    if (
-                        e.response.headers["content-type"]
-                        == "application/json"
-                    ):
-                        raise RequestError(
-                            e.response.body.get("message", e.response.body)
-                        )
-                    else:
-                        raise RequestError(e)
+                    raise RequestError(e)
             except Exception as e:
                 raise Exception(f"Unknown error: {type(e)} - {e}")
             else:
@@ -200,8 +193,8 @@ class FaradayApi:
         raw_version = response.body["ver"]
         match = re.match(version_regex, raw_version)
         products = {"p": "pro", "c": "corp"}
-        product = products.get(match.group("product"), "community")
-        version = match.group("version")
+        product = products.get(match["product"], "community")
+        version = match["version"]
         return {"product": product, "version": version}
 
     @handle_errors
@@ -404,15 +397,12 @@ class FaradayApi:
 
     @handle_errors
     def delete_workspace(self, workspace_name: str):
-        response = self.faraday_api.workspace.delete(workspace_name)
-        return response
+        return self.faraday_api.workspace.delete(workspace_name)
 
     @handle_errors
     def is_workspace_available(self, workspace_name):
         workspaces = self.get_workspaces()
-        available_workspaces = [
-            ws for ws in map(lambda x: x["name"], workspaces)
-        ]
+        available_workspaces = list(map(lambda x: x["name"], workspaces))
         return workspace_name in available_workspaces
 
     @handle_errors
@@ -440,7 +430,6 @@ class FaradayApi:
 
     @handle_errors
     def download_executive_report(self, workspace_name: str, report_id: int):
-        response = self.faraday_api.executive_report.download(
+        return self.faraday_api.executive_report.download(
             workspace_name, report_id
         )
-        return response

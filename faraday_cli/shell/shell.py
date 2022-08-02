@@ -207,11 +207,7 @@ class FaradayShell(Cmd):
             api_client = FaradayApi(faraday_url, ignore_ssl=ignore_ssl)
             login_ok = api_client.login(user, password)
             if login_ok is None or login_ok is True:
-                if login_ok is None:
-                    # 2FA Required
-                    second_factor = click.prompt("2FA")
-                else:
-                    second_factor = None
+                second_factor = click.prompt("2FA") if login_ok is None else None
                 token = api_client.get_token(second_factor)
                 active_config.faraday_url = faraday_url
                 active_config.ignore_ssl = args.ignore_ssl
@@ -322,11 +318,12 @@ class FaradayShell(Cmd):
                 "FARADAY SERVER": active_config.faraday_url,
                 "IGNORE SSL": active_config.ignore_ssl,
                 "VERSION": version,
-                "USER": user if user else "-",
+                "USER": user or "-",
                 "VALID TOKEN": "\U00002714" if valid_token else "\U0000274c",
                 "WORKSPACE": active_config.workspace,
             }
         ]
+
         self.poutput(
             style(
                 tabulate(
@@ -445,10 +442,9 @@ class FaradayShell(Cmd):
     # Run Command
     def run_command(self, plugin, user, command):
         current_path = os.path.abspath(os.getcwd())
-        modified_command = plugin.processCommandString(
+        if modified_command := plugin.processCommandString(
             getpass.getuser(), current_path, command
-        )
-        if modified_command:
+        ):
             command = modified_command
         p = subprocess.Popen(
             shlex.split(command),
@@ -486,8 +482,7 @@ class FaradayShell(Cmd):
             self.poutput(f"cd: no such file or directory: {path}")
 
     def default(self, statement: Statement):
-        plugin = self.command_analyzer.get_plugin(statement.raw)
-        if plugin:
+        if plugin := self.command_analyzer.get_plugin(statement.raw):
             if not active_config.workspace:
                 self.perror("No active Workspace")
                 os.system(statement.raw)
@@ -496,20 +491,19 @@ class FaradayShell(Cmd):
                     f"{self.emojis['laptop']} Processing {plugin.id} command",
                     fg="green",
                 )
-                command_json = utils.run_tool(
+                if command_json := utils.run_tool(
                     plugin, getpass.getuser(), statement.raw
-                )
-                if not command_json:
-                    click.secho(
-                        f"{self.emojis['cross']} Command execution error!!",
-                        fg="red",
-                    )
-                else:
+                ):
                     self.data_queue.put(
                         {
                             "workspace": active_config.workspace,
                             "json_data": command_json,
                         }
+                    )
+                else:
+                    click.secho(
+                        f"{self.emojis['cross']} Command execution error!!",
+                        fg="red",
                     )
         else:
             os.system(statement.raw)

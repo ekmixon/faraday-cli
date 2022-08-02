@@ -64,34 +64,32 @@ class ReportsCommands(cmd2.CommandSet):
             self._cmd.perror(f"File {report_path} dont exists")
             return
         if not args.json_output:
-            if not args.workspace_name:
-                if active_config.workspace:
-                    workspace_name = active_config.workspace
-                else:
-                    self._cmd.perror("No active Workspace")
-                    return
-            else:
+            if args.workspace_name:
                 workspace_name = args.workspace_name
-            if not self._cmd.api_client.is_workspace_available(workspace_name):
-                if not args.create_workspace:
-                    self._cmd.perror(f"Invalid workspace: {workspace_name}")
+            elif active_config.workspace:
+                workspace_name = active_config.workspace
+            else:
+                self._cmd.perror("No active Workspace")
+                return
+            if self._cmd.api_client.is_workspace_available(workspace_name):
+                destination_workspace = workspace_name
+            elif not args.create_workspace:
+                self._cmd.perror(f"Invalid workspace: {workspace_name}")
+                return
+            else:
+                try:
+                    self._cmd.api_client.create_workspace(workspace_name)
+                    self._cmd.poutput(
+                        cmd2.style(
+                            f"Workspace {workspace_name} created",
+                            fg="green",
+                        )
+                    )
+                except Exception as e:
+                    self._cmd.perror(f"Error creating workspace: {e}")
                     return
                 else:
-                    try:
-                        self._cmd.api_client.create_workspace(workspace_name)
-                        self._cmd.poutput(
-                            cmd2.style(
-                                f"Workspace {workspace_name} created",
-                                fg="green",
-                            )
-                        )
-                    except Exception as e:
-                        self._cmd.perror(f"Error creating workspace: {e}")
-                        return
-                    else:
-                        destination_workspace = workspace_name
-            else:
-                destination_workspace = workspace_name
+                    destination_workspace = workspace_name
         if args.plugin_id:
             plugin = self._cmd.plugins_manager.get_plugin(args.plugin_id)
             if not plugin:

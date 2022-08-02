@@ -135,14 +135,13 @@ class HostCommands(cmd2.CommandSet):
     @cmd2.as_subcommand_to("host", "get", get_host_parser, help="get a host")
     def get_host(self, args: argparse.Namespace):
         """Get host information"""
-        if not args.workspace_name:
-            if active_config.workspace:
-                workspace_name = active_config.workspace
-            else:
-                self._cmd.perror("No active Workspace")
-                return
-        else:
+        if args.workspace_name:
             workspace_name = args.workspace_name
+        elif active_config.workspace:
+            workspace_name = active_config.workspace
+        else:
+            self._cmd.perror("No active Workspace")
+            return
         try:
             host = self._cmd.api_client.get_host(workspace_name, args.host_id)
         except NotFoundError:
@@ -258,14 +257,13 @@ class HostCommands(cmd2.CommandSet):
     )
     def delete_host(self, args):
         """Delete Host"""
-        if not args.workspace_name:
-            if active_config.workspace:
-                workspace_name = active_config.workspace
-            else:
-                self._cmd.perror("No active Workspace")
-                return
-        else:
+        if args.workspace_name:
             workspace_name = args.workspace_name
+        elif active_config.workspace:
+            workspace_name = active_config.workspace
+        else:
+            self._cmd.perror("No active Workspace")
+            return
         try:
             self._cmd.api_client.delete_host(workspace_name, args.host_id)
         except NotFoundError:
@@ -299,22 +297,20 @@ class HostCommands(cmd2.CommandSet):
     )
     def create_hosts(self, args: argparse.Namespace):
         """Create Hosts"""
-        if not args.workspace_name:
-            if active_config.workspace:
-                workspace_name = active_config.workspace
-            else:
-                self._cmd.perror("No active Workspace")
-                return
-        else:
+        if args.workspace_name:
             workspace_name = args.workspace_name
+        elif active_config.workspace:
+            workspace_name = active_config.workspace
+        else:
+            self._cmd.perror("No active Workspace")
+            return
         if args.stdin:
             host_data = sys.stdin.read()
+        elif args.host_data:
+            host_data = args.host_data
         else:
-            if not args.host_data:
-                self._cmd.perror("Missing host data")
-                return
-            else:
-                host_data = args.host_data
+            self._cmd.perror("Missing host data")
+            return
         try:
             json_data = utils.json_schema_validator(HOST_CREATE_JSON_SCHEMA)(
                 host_data

@@ -59,83 +59,83 @@ class StatsCommands(cmd2.CommandSet):
             workspace_name = args.workspace_name
 
         def gather_vulns_stats(vulns):
-            if vulns["vulnerabilities"]:
-                counters = defaultdict(int)
-                for vuln in vulns["vulnerabilities"]:
-                    if len(vuln["value"]["hostnames"]):
-                        host_identifier = vuln["value"]["hostnames"][0]
-                    else:
-                        host_identifier = vuln["value"]["target"]
-                    counters[host_identifier] += 1
-                data = list(map(lambda x: [x], counters.values()))
-                termgraph_data = termgraph.TERMGRAPH_DATA_TEMPLATE.copy()
-                termgraph_data[
-                    "title"
-                ] = f"Vulnerability stats [{workspace_name}]"
-                termgraph_data["data"] = data
-                termgraph_data["labels"] = [x for x in counters.keys()]
-                termgraph_data["categories"] = ["vulns"]
-                termgraph_data["color"] = ["red"]
-                return termgraph_data
-            else:
+            if not vulns["vulnerabilities"]:
                 return None
+
+            counters = defaultdict(int)
+            for vuln in vulns["vulnerabilities"]:
+                if len(vuln["value"]["hostnames"]):
+                    host_identifier = vuln["value"]["hostnames"][0]
+                else:
+                    host_identifier = vuln["value"]["target"]
+                counters[host_identifier] += 1
+            data = list(map(lambda x: [x], counters.values()))
+            termgraph_data = termgraph.TERMGRAPH_DATA_TEMPLATE.copy()
+            termgraph_data[
+                "title"
+            ] = f"Vulnerability stats [{workspace_name}]"
+            termgraph_data["data"] = data
+            termgraph_data["labels"] = list(counters.keys())
+            termgraph_data["categories"] = ["vulns"]
+            termgraph_data["color"] = ["red"]
+            return termgraph_data
 
         def gather_severity_stats(vulns):
-            if vulns["vulnerabilities"]:
-                counters = defaultdict(
-                    lambda: {"severity": {x: 0 for x in SEVERITY_COLORS}}
-                )
-                for vuln in vulns["vulnerabilities"]:
-                    if len(vuln["value"]["hostnames"]):
-                        host_identifier = vuln["value"]["hostnames"][0]
-                    else:
-                        host_identifier = vuln["value"]["target"]
-                    counters[host_identifier]["severity"][
-                        vuln["value"]["severity"]
-                    ] += 1
-                data = list(
-                    map(
-                        lambda x: list(x["severity"].values()),
-                        counters.values(),
-                    )
-                )
-
-                termgraph_data = termgraph.TERMGRAPH_DATA_TEMPLATE.copy()
-                termgraph_data["title"] = f"Severity stats [{workspace_name}]"
-                termgraph_data["data"] = data
-                termgraph_data["labels"] = [x for x in counters.keys()]
-                termgraph_data["categories"] = list(SEVERITY_COLORS.keys())
-                termgraph_data["color"] = list(SEVERITY_COLORS.values())
-                termgraph_data["stacked"] = True
-                return termgraph_data
-            else:
+            if not vulns["vulnerabilities"]:
                 return None
+
+            counters = defaultdict(
+                lambda: {"severity": {x: 0 for x in SEVERITY_COLORS}}
+            )
+            for vuln in vulns["vulnerabilities"]:
+                if len(vuln["value"]["hostnames"]):
+                    host_identifier = vuln["value"]["hostnames"][0]
+                else:
+                    host_identifier = vuln["value"]["target"]
+                counters[host_identifier]["severity"][
+                    vuln["value"]["severity"]
+                ] += 1
+            data = list(
+                map(
+                    lambda x: list(x["severity"].values()),
+                    counters.values(),
+                )
+            )
+
+            termgraph_data = termgraph.TERMGRAPH_DATA_TEMPLATE.copy()
+            termgraph_data["title"] = f"Severity stats [{workspace_name}]"
+            termgraph_data["data"] = data
+            termgraph_data["labels"] = list(counters.keys())
+            termgraph_data["categories"] = list(SEVERITY_COLORS.keys())
+            termgraph_data["color"] = list(SEVERITY_COLORS.values())
+            termgraph_data["stacked"] = True
+            return termgraph_data
 
         def gather_history_stats(vulns):
-            if vulns["vulnerabilities"]:
-                counters = defaultdict(int)
-                DATE_FORMAT = "%Y-%m-%d"
-                min_date = datetime.now()
-                for vuln in vulns["vulnerabilities"]:
-                    vuln_date = dateutil.parser.parse(
-                        vuln["value"]["metadata"]["create_time"]
-                    )
-                    if vuln_date.date() < min_date.date():
-                        min_date = vuln_date
-                    date_str = vuln_date.strftime(DATE_FORMAT)
-                    counters[date_str] += 1
-                data = list(map(lambda x: [x], counters.values()))
-                termgraph_data = termgraph.TERMGRAPH_DATA_TEMPLATE.copy()
-                min_date_str = min_date.strftime(DATE_FORMAT)
-                title = f"Heatmap since {min_date_str} [{workspace_name}]"
-                termgraph_data["title"] = title
-                termgraph_data["data"] = data
-                termgraph_data["labels"] = [x for x in counters.keys()]
-                termgraph_data["start_dt"] = min_date.strftime(DATE_FORMAT)
-                termgraph_data["calendar"] = True
-                return termgraph_data
-            else:
+            if not vulns["vulnerabilities"]:
                 return None
+
+            counters = defaultdict(int)
+            DATE_FORMAT = "%Y-%m-%d"
+            min_date = datetime.now()
+            for vuln in vulns["vulnerabilities"]:
+                vuln_date = dateutil.parser.parse(
+                    vuln["value"]["metadata"]["create_time"]
+                )
+                if vuln_date.date() < min_date.date():
+                    min_date = vuln_date
+                date_str = vuln_date.strftime(DATE_FORMAT)
+                counters[date_str] += 1
+            data = list(map(lambda x: [x], counters.values()))
+            termgraph_data = termgraph.TERMGRAPH_DATA_TEMPLATE.copy()
+            min_date_str = min_date.strftime(DATE_FORMAT)
+            title = f"Heatmap since {min_date_str} [{workspace_name}]"
+            termgraph_data["title"] = title
+            termgraph_data["data"] = data
+            termgraph_data["labels"] = list(counters.keys())
+            termgraph_data["start_dt"] = min_date.strftime(DATE_FORMAT)
+            termgraph_data["calendar"] = True
+            return termgraph_data
 
         @Halo(text="Gathering data", text_color="green", spinner="dots")
         def graph_stats(gather_data_func, filter_to_apply):

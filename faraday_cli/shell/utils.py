@@ -32,8 +32,7 @@ SEVERITY_COLORS = {
 
 
 def validate_url(value):
-    valid_url = url(value)
-    if valid_url:
+    if valid_url := url(value):
         return value
     else:
         raise Exception(f"Invalid url: {value}")
@@ -51,19 +50,20 @@ def validate_json(value):
 
 def json_schema_validator(schema):
     def _validate_json(value):
-        if value:
-            if isinstance(value, str):
-                try:
-                    json_value = json.loads(value)
-                except Exception as e:
-                    raise Exception(f"Invalid json format: {value} - {e}")
-            else:
-                json_value = value
+        if not value:
+            return
+        if isinstance(value, str):
             try:
-                jsonschema.validate(instance=json_value, schema=schema)
-            except jsonschema.exceptions.ValidationError as err:
-                raise InvalidJsonSchema(f"{err}")
-            return json_value
+                json_value = json.loads(value)
+            except Exception as e:
+                raise Exception(f"Invalid json format: {value} - {e}")
+        else:
+            json_value = value
+        try:
+            jsonschema.validate(instance=json_value, schema=schema)
+        except jsonschema.exceptions.ValidationError as err:
+            raise InvalidJsonSchema(f"{err}")
+        return json_value
 
     return _validate_json
 
@@ -82,10 +82,7 @@ def get_ip_and_hostname(value):
 
 
 def trim_long_text(text, size=50):
-    if len(text) <= size:
-        return text
-    else:
-        return f"{text[:size]}..."
+    return text if len(text) <= size else f"{text[:size]}..."
 
 
 def get_severity_color(severity):
@@ -93,7 +90,7 @@ def get_severity_color(severity):
 
 
 def get_ignore_info_severity_filter() -> dict:
-    query_filter = {
+    return {
         "filters": [
             {
                 "and": [
@@ -103,11 +100,10 @@ def get_ignore_info_severity_filter() -> dict:
             }
         ]
     }
-    return query_filter
 
 
 def get_severity_filter(severities: list) -> dict:
-    query_filter = {
+    return {
         "filters": [
             {
                 "or": [
@@ -117,27 +113,21 @@ def get_severity_filter(severities: list) -> dict:
             }
         ]
     }
-    return query_filter
 
 
 def get_confirmed_filter() -> dict:
-    query_filter = {
-        "filters": [{"name": "confirmed", "op": "==", "val": "true"}]
-    }
-    return query_filter
+    return {"filters": [{"name": "confirmed", "op": "==", "val": "true"}]}
 
 
 def get_active_workspaces_filter() -> dict:
-    query_filter = {"filters": [{"name": "active", "op": "eq", "val": "true"}]}
-    return query_filter
+    return {"filters": [{"name": "active", "op": "eq", "val": "true"}]}
 
 
 def run_tool(plugin, user, command, show_output=True):
     current_path = os.path.abspath(os.getcwd())
-    modified_command = plugin.processCommandString(
+    if modified_command := plugin.processCommandString(
         getpass.getuser(), current_path, command
-    )
-    if modified_command:
+    ):
         command = modified_command
     p = subprocess.Popen(
         shlex.split(command),

@@ -349,7 +349,7 @@ class Halo(object):
         stripped_text = text.strip()
 
         # Check which frame of the animation is the widest
-        max_spinner_length = max([len(i) for i in self._spinner["frames"]])
+        max_spinner_length = max(len(i) for i in self._spinner["frames"])
 
         # Subtract to the current terminal size the max spinner length
         # (-1 to leave room for the extra space between spinner and text)
@@ -363,21 +363,25 @@ class Halo(object):
                 """
                 Make the text bounce back and forth
                 """
-                for x in range(0, text_length - terminal_width + 1):
-                    frames.append(stripped_text[x : terminal_width + x])
+                frames.extend(
+                    stripped_text[x : terminal_width + x]
+                    for x in range(text_length - terminal_width + 1)
+                )
+
                 frames.extend(list(reversed(frames)))
-            elif "marquee":
+            else:
                 """
                 Make the text scroll like a marquee
                 """
-                stripped_text = (
-                    stripped_text + " " + stripped_text[:terminal_width]
+                stripped_text = f"{stripped_text} {stripped_text[:terminal_width]}"
+                frames.extend(
+                    stripped_text[x : terminal_width + x]
+                    for x in range(text_length + 1)
                 )
-                for x in range(0, text_length + 1):
-                    frames.append(stripped_text[x : terminal_width + x])
-        elif terminal_width < text_length and not animation:
+
+        elif terminal_width < text_length:
             # Add ellipsis if text is larger than terminal width and no animation was specified
-            frames = [stripped_text[: terminal_width - 6] + " (...)"]
+            frames = [f"{stripped_text[: terminal_width - 6]} (...)"]
         else:
             frames = [stripped_text]
 
@@ -404,7 +408,7 @@ class Halo(object):
 
         self.clear()
         frame = self.frame()
-        output = "\r{}".format(frame)
+        output = f"\r{frame}"
         try:
             self._write(output)
         except UnicodeEncodeError:
@@ -435,7 +439,7 @@ class Halo(object):
             frame = colored_frame(frame, self._color)
 
         self._frame_index += 1
-        self._frame_index = self._frame_index % len(frames)
+        self._frame_index %= len(frames)
 
         text_frame = self.text_frame()
         return "{0} {1}".format(
@@ -456,19 +460,17 @@ class Halo(object):
             if self._text_color:
                 return colored_frame(self._text["frames"][0], self._text_color)
 
-            # Return first frame (can't return original text because at this point it might be ellipsed)
-            return self._text["frames"][0]
+            else:
+                # Return first frame (can't return original text because at this point it might be ellipsed)
+                return self._text["frames"][0]
 
         frames = self._text["frames"]
         frame = frames[self._text_index]
 
         self._text_index += 1
-        self._text_index = self._text_index % len(frames)
+        self._text_index %= len(frames)
 
-        if self._text_color:
-            return colored_frame(frame, self._text_color)
-
-        return frame
+        return colored_frame(frame, self._text_color) if self._text_color else frame
 
     def start(self, text=None):
         """Starts the spinner on a separate thread.
@@ -588,11 +590,7 @@ class Halo(object):
 
         symbol = decode_utf_8_text(symbol)
 
-        if text is not None:
-            text = decode_utf_8_text(text)
-        else:
-            text = self._text["original"]
-
+        text = decode_utf_8_text(text) if text is not None else self._text["original"]
         text = text.strip()
 
         if self._text_color:
